@@ -23,8 +23,8 @@ const generateToken=async (user)=>{
 
 
 const registerUser=asynchandler(async (req,resp)=>{
-    const {fullName,email,phone,password}=req.body;
-    if(!fullName || !email || !phone || !password){
+    const {fullName,email,phone,password,role}=req.body;
+    if(!fullName || !email || !phone || !password || !role){
         throw new ApiError("All fields are required",400)
     }
 

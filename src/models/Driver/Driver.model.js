@@ -1,36 +1,16 @@
 import mongoose from "mongoose";
+import aggregatePaginate from "mongoose-aggregate-paginate-v2";
+
 
 const driverSchema = new mongoose.Schema(
   {
-    name: {
-      type: String,
-      required: true,
-      trim: true,
+      userId:{
+        type:mongoose.Schema.Types.ObjectId,
+        ref:"User",
+        required:true,
+        unique:true
     },
-
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      lowercase: true,
-    },
-
-    phone: {
-      type: String,
-      required: true,
-      unique: true,
-    },
-
-    password: {
-      type: String,
-      required: true,
-    },
-
-    profileImage: {
-      type: String, // URL
-      default: "",
-    },
-
+    
     licenseNumber: {
       type: String,
       required: true,
@@ -74,7 +54,7 @@ const driverSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: ["active", "blocked", "pending"],
-      default: "pending",
+      default: "active",
     },
 
     deviceToken: {
@@ -84,6 +64,7 @@ const driverSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+driverSchema.plugin(aggregatePaginate)
 
 export const Driver = mongoose.model("Driver", driverSchema);
 

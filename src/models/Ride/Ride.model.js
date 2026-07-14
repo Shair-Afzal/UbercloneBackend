@@ -8,11 +8,10 @@ const rideSchema = new mongoose.Schema(
       required: true,
     },
 
-    driverId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Driver",
-      default: null,
-    },
+    driverId:{
+    type:mongoose.Schema.Types.ObjectId,
+    ref:"User"
+},
 
     pickupLocation: {
       type: String,

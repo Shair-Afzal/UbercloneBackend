@@ -1,10 +1,11 @@
 import mongoose from "mongoose";
+import aggregatePaginate from "mongoose-aggregate-paginate-v2";
 
 const vehicleSchema = new mongoose.Schema(
   {
     driverId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Driver",
+      ref: "User",
       required: true,
     },
 
@@ -44,6 +45,7 @@ const vehicleSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+VehicleSchema.plugin(aggregatePaginate);
 
 export const Vehicle = mongoose.model("Vehicle", vehicleSchema);
 
