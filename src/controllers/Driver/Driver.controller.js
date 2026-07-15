@@ -120,4 +120,4 @@ const updatedriver=(async (req,resp)=>{
 })
 
 
-export {createdriver,getalldriver}
+export {createdriver,getalldriver,getdriverbyid,updatedriver}
