@@ -374,12 +374,30 @@ const driverridehistory=asynchandler(async (req,resp)=>{
         const driverridehistory=await Ride.find({driverId})
         .populate("driverId", "licenseNumber rating");
 
-        if(!userridehistory){
+        if(!driverridehistory){
             throw new ApiError(400,"Error in fetching user driverhidtory")
         }
 
-        return resp.status(200).json(200,userridehistory,"driver ride history is fetch succesfully ")
+        return resp.status(200).json(200,driverridehistory,"driver ride history is fetch succesfully ")
 
+
+
+})
+
+const getcurrentride=asynhabdler(async (req,resp)=>{
+     const {rideId}=req.params;
+   if(!rideId){
+    throw new ApiError(400,"ride id is required")
+   }
+
+   const ride=await Ride.findById(rideId)
+    .populate("userId", "fullName phone profileImage")
+    .populate("driverId", "licenseNumber rating");
+   if(!ride){
+    throw new ApiError(404,"Ride does not exist")
+   }
+
+   return resp.status(200).json(new ApiResponse(200,ride,"ride data fetch successfully "))
 
 
 })
