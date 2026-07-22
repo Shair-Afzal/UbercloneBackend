@@ -2,6 +2,7 @@ import {app} from "./app.js";
 import http from "http";
 import dotenv from "dotenv";
 import Connectdb from "./db/index.js";
+import { initsocketserver } from "./sockets/socket.js";
 
 
 dotenv.config({ path: "./.env" });
@@ -13,6 +14,7 @@ const result = dotenv.config();
 
 
 const server=http.createServer(app);
+initsocketserver(server)
 
 Connectdb().then(()=>{
     server.listen(process.env.PORT,()=>{

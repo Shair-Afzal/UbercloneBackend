@@ -1,12 +1,38 @@
-import ApiError from "../../utils/ApiError.js";
+import {ApiError} from "../../utils/ApiError.js";
 import { Ride } from "../../models/Ride/Ride.model.js";
-import ApiResponse from "../../utils/ApiResponse.js";
-import asynchandler from "../../utils/asynchandler.js";
+import {ApiResponse} from "../../utils/ApiResponse.js";
+import {asynchandler} from "../../utils/asynchandler.js";
 import { getIO } from "../../sockets/socket.js";
+import { User } from "../../models/User/user.model.js";
+import aggregatePaginate from "mongoose-aggregate-paginate-v2";
+import { Driver } from "../../models/Driver/Driver.model.js";
+
+function getDistance(lat1, lon1, lat2, lon2) {
+
+    const R = 6371;
+
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) *
+        Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c;
+}
+
+
 
 const createriderequest = asynchandler(async (req, resp) => {
 
     const {
+        userId,
         pickupLocation,
         destination,
         pickupCoordinates,
@@ -32,9 +58,14 @@ const createriderequest = asynchandler(async (req, resp) => {
         throw new ApiError(400, "All fields are required");
     }
 
+    const user=await User.findById(userId);
+    if(!user){
+        throw new ApiError(404,"user does not found")
+    }
+
     const ride = await Ride.create({
 
-        userId: req.user._id,
+        userId: userId,
 
         pickupLocation,
         destination,
@@ -61,7 +92,7 @@ const createriderequest = asynchandler(async (req, resp) => {
     const io = getIO();
 
    
-    io.to("driver-online").emit("new-ride-request", ride);
+    io.to("drivers").emit("new-ride-request", ride);
 
     return resp.status(201).json(
         new ApiResponse(
@@ -77,10 +108,10 @@ const createriderequest = asynchandler(async (req, resp) => {
 
 const acceptRide = asynchandler(async (req, resp) => {
 
-    const { rideId } = req.body;
+    const { rideId,driverId } = req.body;
 
     if (!rideId) {
-        throw new ApiError(400, "Ride Id is required");
+        throw new ApiError(400, "Ride Id and driver id is required");
     }
 
    
@@ -101,7 +132,7 @@ const acceptRide = asynchandler(async (req, resp) => {
     const ride = await Ride.findByIdAndUpdate(
         rideId,
         {
-            driverId: req.user._id, 
+            driverId: driverId, 
             rideStatus: "accepted"
         },
         { new: true }
@@ -132,11 +163,18 @@ const acceptRide = asynchandler(async (req, resp) => {
 
 const cancelRide = asynchandler(async (req, resp) => {
 
-    const { rideId } = req.body;
+    const { rideId,reason,userId} = req.body;
 
-    if (!rideId) {
-        throw new ApiError(400, "Ride Id is required");
+    if (!rideId || !reason || !userId) {
+        throw new ApiError(400, "Ride Id and reason and userId is required");
     }
+
+    const user=await User.findById(userId)
+    if(!user){
+        throw new ApiError(404,"user does not exist")
+    }
+
+
 
    
     const existingRide = await Ride.findById(rideId);
@@ -158,7 +196,9 @@ const cancelRide = asynchandler(async (req, resp) => {
     const ridecancel = await Ride.findByIdAndUpdate(
         rideId,
         {
-            rideStatus: "cancelled"
+            rideStatus: "cancelled",
+            cancelledBy:user.role,
+    cancelReason:reason
         },
         { new: true }
     );
@@ -176,7 +216,7 @@ const cancelRide = asynchandler(async (req, resp) => {
         "ride-cancelled",
         ridecancel
     );
-
+ 
     return resp.status(200).json(
         new ApiResponse(
             200,
@@ -217,6 +257,7 @@ const arrivedRide=asynchandler(async (req,resp)=>{
 
     const ridearrived=await Ride.findByIdAndUpdate(  rideId,
         {
+            
             rideStatus: "arrived"
         },
         { new: true });
@@ -384,11 +425,11 @@ const driverridehistory=asynchandler(async (req,resp)=>{
 
 })
 
-const getcurrentride=asynhabdler(async (req,resp)=>{
+const getcurrentride=asynchandler(async (req,resp)=>{
      const {rideId}=req.params;
    if(!rideId){
     throw new ApiError(400,"ride id is required")
-   }
+   } 
 
    const ride=await Ride.findById(rideId)
     .populate("userId", "fullName phone profileImage")
@@ -403,6 +444,112 @@ const getcurrentride=asynhabdler(async (req,resp)=>{
 })
 
 
+const nearbyDrivers = asynchandler(async (req, resp) => {
+
+    const { latitude, longitude } = req.query;
+
+    if (!latitude || !longitude) {
+        throw new ApiError(400, "Latitude and Longitude required");
+    }
+
+    const drivers = await Driver.find({
+        isOnline: true,
+        status: "active"
+    }).populate("userId", "fullName phone profileImage");
+
+    const nearby = drivers.filter(driver => {
+
+        if (
+            !driver.currentLocation ||
+            driver.currentLocation.lat == null ||
+            driver.currentLocation.lng == null
+        ) {
+            return false;
+        }
+
+        const distance = getDistance(
+            Number(latitude),
+            Number(longitude),
+            driver.currentLocation.lat,
+            driver.currentLocation.lng
+        );
+
+        return distance <= 5;
+    });
+
+    return resp.status(200).json(
+        new ApiResponse(
+            200,
+            nearby,
+            "Nearby drivers fetched successfully"
+        )
+    );
+
+});
+
+
+
+const getRideRequests = asynchandler(async (req, resp) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    const aggregate = Ride.aggregate([
+        {
+            $match: {
+                rideStatus: "requested"
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "userId",
+                foreignField: "_id",
+                as: "user"
+            }
+        },
+        {
+            $unwind: "$user"
+        },
+        {
+            $project: {
+                pickupLocation: 1,
+                destination: 1,
+                fare: 1,
+                distance: 1,
+                duration: 1,
+                rideType: 1,
+                paymentMethod: 1,
+                createdAt: 1,
+                "user.fullName": 1,
+                "user.phone": 1,
+                "user.profileImage": 1
+            }
+        },
+        {
+            $sort: {
+                createdAt: -1
+            }
+        }
+    ]);
+
+    const rides = await Ride.aggregatePaginate(aggregate, {
+        page,
+        limit
+    });
+
+    return resp.status(200).json(
+        new ApiResponse(200, rides, "Ride requests fetched successfully")
+    );
+});
+
+
+
+
+
+
+
+
+
 
 export {
     createriderequest,
@@ -414,5 +561,8 @@ export {
     getRidebyId,
     userridehistory,
     driverridehistory,
+    nearbyDrivers,
+    getcurrentride,
+    getRideRequests,
     
 };

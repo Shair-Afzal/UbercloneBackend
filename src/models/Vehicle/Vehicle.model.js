@@ -45,7 +45,7 @@ const vehicleSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-VehicleSchema.plugin(aggregatePaginate);
+vehicleSchema.plugin(aggregatePaginate);
 
 export const Vehicle = mongoose.model("Vehicle", vehicleSchema);
 

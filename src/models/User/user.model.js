@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import aggregatePaginate from "mongoose-aggregate-paginate-v2";
-import Jwt from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 
 const userSchema = new mongoose.Schema(
   {
@@ -60,7 +60,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
-    restOtp:{
+    resetOtp:{
       type:String,
       default:""
     },
@@ -87,23 +87,20 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-UserSchema.plugin(aggregatePaginate);
-export const User = mongoose.model("User", userSchema);
+userSchema.plugin(aggregatePaginate);
 
-
-
-User.pre("save", async function (next) {
+userSchema.pre("save", async function () {
   if (!this.isModified("password")) {
     return ;
   }
   this.password=await bcrypt.hash(this.password,10);
 })
 
-User.methods.isPasswordCorrect=async function (password){
+userSchema.methods.isPasswordCorrect=async function (password){
   return await bcrypt.compare(password,this.password)
 }
 
-User.methods.genreateaccessToken=function async (){
+userSchema.methods.genreateaccessToken=function  (){
   return jwt.sign(
     {
       id:this._id,
@@ -115,7 +112,7 @@ User.methods.genreateaccessToken=function async (){
   )
 }
 
-User.methods.genreaterefreshToken=function async (){
+userSchema.methods.genreaterefreshToken=function (){
   return jwt.sign(
     {
       id:this._id,
@@ -126,5 +123,9 @@ User.methods.genreaterefreshToken=function async (){
     }
   )
 }
+
+
+
+export const User = mongoose.model("User", userSchema);
 
 

@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import aggregatePaginate from "mongoose-aggregate-paginate-v2";
 
 const rideSchema = new mongoose.Schema(
   {
@@ -86,6 +87,16 @@ const rideSchema = new mongoose.Schema(
       ],
       default: "requested",
     },
+    cancelledBy: {
+    type: String,
+    enum: ["user", "driver"],
+    default: null
+},
+
+cancelReason: {
+    type: String,
+    default: ""
+},
 
     startedAt: {
       type: Date,
@@ -101,6 +112,8 @@ const rideSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+rideSchema.plugin(aggregatePaginate)
 
 export const Ride = mongoose.model("Ride", rideSchema);
 

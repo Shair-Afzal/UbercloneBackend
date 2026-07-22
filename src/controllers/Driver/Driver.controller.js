@@ -1,18 +1,21 @@
-import ApiError from "../../utils/ApiError.js";
+import {ApiError} from "../../utils/ApiError.js";
 import { Driver } from "../../models/Driver/Driver.model.js";
-import ApiResponse from "../../utils/ApiResponse.js";
-import asynchandler from "../../utils/asynchandler.js";
-import aggreagatePaginate from "mongoose-aggregate-paginate-v2";
+import {ApiResponse} from "../../utils/ApiResponse.js";
+import {asynchandler} from "../../utils/asynchandler.js";
+import aggregatePaginate from "mongoose-aggregate-paginate-v2";
 import { User } from "../../models/User/user.model.js";
 import { Vehicle } from "../../models/Vehicle/Vehicle.model.js";
 
 
+
+
 const createdriver=asynchandler(async (req,resp)=>{
-    const {licenseNumber, vehicleId}=req.body;
-    if(  !licenseNumber || !vehicleId){
+    const {userId,licenseNumber, vehicleId}=req.body;
+    if(  !licenseNumber || !vehicleId || !userId){
         throw new ApiError(404,"all fields are required")
     }
-    const user= await User.findById(req.user?._id);
+    const user= await User.findById(userId)
+   
     if(!user){
         throw new ApiError(400,"user does not exist")
     }
@@ -22,7 +25,7 @@ const createdriver=asynchandler(async (req,resp)=>{
     }
 
     const driver=await Driver.create({
-        userId:req.user?._id,
+        userId:userId,
         licenseNumber,
         vehicleId
     })
@@ -33,7 +36,7 @@ const createdriver=asynchandler(async (req,resp)=>{
 })
 
 
-const getalldriver=asynchhandler(async (req,resp)=>{
+const getalldriver=asynchandler(async (req,resp)=>{
     const page=parseInt(req.query.page) || 1;
     const limit=parseInt(req.query.limit) || 10;
 
@@ -65,7 +68,7 @@ const getalldriver=asynchhandler(async (req,resp)=>{
         }
     ])
 
-    const drivers=await aggreagatePaginate(aggregation,{page,limit});
+    const drivers=await Driver.aggregatePaginate(aggregation,{page,limit});
     if(!drivers){
         throw new ApiError(404,"Error fetching drivers")
     }

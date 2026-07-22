@@ -6,6 +6,7 @@ export const registerdriverevent=(io,socket)=>{
             const {userId}=data;
              console.log("Driver Registered:", userId);
             console.log("Socket ID:", socket.id);
+            socket.join("drivers");
             socket.join(userId.toString());
             const driver=await Driver.findOneAndUpdate({userId:userId},{
                 isOnline:true
@@ -57,6 +58,8 @@ export const registerdriverevent=(io,socket)=>{
 
                 try{
                  const {userId,currentLocation}=data;
+
+                 console.log("user location",userId,currentLocation)
         
                  const driver=await Driver.findOneAndUpdate({userId:userId},{
                     currentLocation:currentLocation

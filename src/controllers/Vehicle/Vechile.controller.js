@@ -1,8 +1,8 @@
-import ApiError from "../../utils/ApiError.js";
+import {ApiError} from "../../utils/ApiError.js";
 import {Vehicle} from "../../models/Vehicle/Vehicle.model.js"
-import ApiResponse from "../../utils/ApiResponse.js";
-import asynchandler from "../../utils/asynchandler.js";
-import aggreagatePaginate from "mongoose-aggregate-paginate-v2";
+import {ApiResponse} from "../../utils/ApiResponse.js";
+import {asynchandler} from "../../utils/asynchandler.js";
+import aggregatePaginate from "mongoose-aggregate-paginate-v2";
 // import { User } from "../../models/User/user.model.js";
 
 
@@ -47,7 +47,7 @@ const getAllVehicles=asynchandler(async (req,resp)=>{
 
     );
 
-    const vechiles=await aggreagatePaginate(vechileaggregate,{page,limit})
+    const vechiles=await Vehicle.aggregatePaginate(vechileaggregate,{page,limit})
     if(!vechiles){
         throw new ApiError(500,"Error fetching vehicles")
     }
